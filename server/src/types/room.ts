@@ -24,7 +24,7 @@ export interface PlaybackState {
 
 export interface RoomSettings {
   isPrivate: boolean;
-  password?: string;
+  passwordHash?: string; // Hashed password using bcrypt
   maxParticipants: number;
 }
 
