@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { WSClient } from '../services/WSClient';
+import { YouTubePlayer } from '../players/YouTubePlayer';
+import { HTML5Player } from '../players/HTML5Player';
+import { SyncEngine } from '../sync/SyncEngine';
+import { TimeSync } from '../sync/TimeSync';
+import type { IPlayer } from '../players/IPlayer';
 import type { Participant, PlaybackState, ChatMessage } from '../types';
 
 const wsClient = new WSClient();
@@ -24,11 +29,153 @@ export default function RoomPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState('');
   const [currentParticipant, setCurrentParticipant] = useState<Participant | null>(null);
+  const [playerReady, setPlayerReady] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<IPlayer | null>(null);
+  const syncEngineRef = useRef<SyncEngine | null>(null);
+  const timeSyncRef = useRef<TimeSync | null>(null);
+  const youtubeContainerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const isHost = currentParticipant?.isHost ?? false;
+
+  // Initialize TimeSync
+  useEffect(() => {
+    timeSyncRef.current = new TimeSync(wsClient);
+    timeSyncRef.current.start();
+
+    return () => {
+      timeSyncRef.current?.stop();
+    };
+  }, []);
+
+  // Initialize SyncEngine
+  useEffect(() => {
+    syncEngineRef.current = new SyncEngine({
+      noActionThreshold: 100,
+      smoothCorrectionThreshold: 300,
+      hardSeekThreshold: 300,
+      syncInterval: 500,
+    });
+
+    return () => {
+      syncEngineRef.current?.destroy();
+    };
+  }, []);
+
+  // Create player based on media type
+  useEffect(() => {
+    if (!playbackState?.mediaUrl || !playbackState?.mediaType) {
+      return;
+    }
+
+    // Clean up previous player
+    if (playerRef.current) {
+      playerRef.current.destroy();
+      playerRef.current = null;
+      setPlayerReady(false);
+    }
+
+    if (playbackState.mediaType === 'youtube' && youtubeContainerRef.current) {
+      // Create a unique container ID
+      const containerId = 'youtube-player-' + Date.now();
+      youtubeContainerRef.current.id = containerId;
+
+      const player = new YouTubePlayer(containerId);
+      playerRef.current = player;
+
+      player.onReady(() => {
+        player.setSource(playbackState.mediaUrl!);
+        setPlayerReady(true);
+        setDuration(player.getDuration());
+
+        if (syncEngineRef.current) {
+          syncEngineRef.current.setPlayer(player);
+          syncEngineRef.current.setIsHost(isHost);
+          syncEngineRef.current.start();
+        }
+      });
+
+      player.onTimeUpdate((time) => {
+        setCurrentTime(time);
+        if (duration === 0) {
+          setDuration(player.getDuration());
+        }
+      });
+
+      player.onError((err) => {
+        setError(err.message);
+      });
+
+    } else if (playbackState.mediaType === 'direct' && videoRef.current) {
+      const player = new HTML5Player(videoRef.current);
+      playerRef.current = player;
+
+      player.setSource(playbackState.mediaUrl);
+
+      player.onReady(() => {
+        setPlayerReady(true);
+        setDuration(player.getDuration());
+
+        if (syncEngineRef.current) {
+          syncEngineRef.current.setPlayer(player);
+          syncEngineRef.current.setIsHost(isHost);
+          syncEngineRef.current.start();
+        }
+      });
+
+      player.onTimeUpdate((time) => {
+        setCurrentTime(time);
+        if (duration === 0) {
+          setDuration(player.getDuration());
+        }
+      });
+
+      player.onError((err) => {
+        setError(err.message);
+      });
+    }
+
+    return () => {
+      if (playerRef.current) {
+        syncEngineRef.current?.stop();
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
+    };
+  }, [playbackState?.mediaUrl, playbackState?.mediaType, isHost, duration]);
+
+  // Update sync engine when playback state changes
+  useEffect(() => {
+    if (playbackState && syncEngineRef.current && timeSyncRef.current) {
+      syncEngineRef.current.setClockOffset(timeSyncRef.current.getOffset());
+      syncEngineRef.current.updateServerState({
+        isPlaying: playbackState.isPlaying,
+        offset: playbackState.offset,
+        serverTimestamp: playbackState.serverTimestamp,
+        rate: playbackState.rate,
+      });
+
+      // Handle play/pause state for non-host participants
+      if (!isHost && playerRef.current && playerReady) {
+        if (playbackState.isPlaying) {
+          playerRef.current.play();
+        } else {
+          playerRef.current.pause();
+        }
+      }
+    }
+  }, [playbackState, isHost, playerReady]);
+
+  // Update sync engine host status
+  useEffect(() => {
+    if (syncEngineRef.current) {
+      syncEngineRef.current.setIsHost(isHost);
+    }
+  }, [isHost]);
 
   const setupEventHandlers = useCallback(() => {
     wsClient.on('room_state', (data) => {
@@ -69,7 +216,22 @@ export default function RoomPage() {
 
     wsClient.on('media_set', (data) => {
       const { mediaUrl: url, mediaType } = data as { mediaUrl: string; mediaType: string };
-      setPlaybackState((prev) => prev ? { ...prev, mediaUrl: url, mediaType: mediaType as 'youtube' | 'vk' | 'direct' } : null);
+      setPlaybackState((prev) => prev ? {
+        ...prev,
+        mediaUrl: url,
+        mediaType: mediaType as 'youtube' | 'vk' | 'direct',
+        offset: 0,
+        serverTimestamp: Date.now(),
+        isPlaying: false,
+        rate: 1,
+      } : {
+        mediaUrl: url,
+        mediaType: mediaType as 'youtube' | 'vk' | 'direct',
+        offset: 0,
+        serverTimestamp: Date.now(),
+        isPlaying: false,
+        rate: 1,
+      });
       setShowMediaInput(false);
     });
 
@@ -129,15 +291,30 @@ export default function RoomPage() {
   };
 
   const handlePlay = () => {
+    if (isHost && playerRef.current) {
+      playerRef.current.play();
+    }
     wsClient.send('play', { roomId });
   };
 
   const handlePause = () => {
+    if (isHost && playerRef.current) {
+      playerRef.current.pause();
+    }
     wsClient.send('pause', { roomId });
   };
 
   const handleSeek = (position: number) => {
+    if (isHost && playerRef.current) {
+      playerRef.current.seek(position);
+    }
     wsClient.send('seek', { roomId, position });
+  };
+
+  const handleSeekSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const percent = Number(e.target.value);
+    const position = (percent / 100) * duration;
+    handleSeek(position);
   };
 
   const handleSendMessage = () => {
@@ -158,6 +335,14 @@ export default function RoomPage() {
       navigator.clipboard.writeText(roomId);
     }
   };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   if (!isConnected) {
     return (
@@ -201,27 +386,36 @@ export default function RoomPage() {
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
             <p className="text-red-300 text-sm">{error}</p>
+            <button
+              onClick={() => setError('')}
+              className="text-red-300 text-xs underline mt-1"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
         {/* Video Player Area */}
-        <div className="glass rounded-xl flex-1 flex flex-col overflow-hidden">
+        <div className="glass rounded-xl flex-1 flex flex-col overflow-hidden min-h-[400px]">
           {playbackState?.mediaUrl ? (
             <div className="flex-1 relative bg-black">
-              {playbackState.mediaType === 'direct' ? (
+              {playbackState.mediaType === 'direct' && (
                 <video
                   ref={videoRef}
-                  src={playbackState.mediaUrl}
                   className="w-full h-full"
                   controls={false}
+                  playsInline
                 />
-              ) : playbackState.mediaType === 'youtube' ? (
+              )}
+              {playbackState.mediaType === 'youtube' && (
+                <div
+                  ref={youtubeContainerRef}
+                  className="w-full h-full"
+                />
+              )}
+              {playbackState.mediaType === 'vk' && (
                 <div className="w-full h-full flex items-center justify-center">
-                  <p className="text-white/60">YouTube player loading...</p>
-                </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <p className="text-white/60">VK Video player loading...</p>
+                  <p className="text-white/60">VK Video support coming soon</p>
                 </div>
               )}
             </div>
@@ -244,30 +438,50 @@ export default function RoomPage() {
           {/* Playback controls */}
           {playbackState?.mediaUrl && (
             <div className="p-4 border-t border-white/10">
-              <div className="flex items-center gap-4">
-                {isHost && (
-                  <>
-                    <button
-                      onClick={playbackState.isPlaying ? handlePause : handlePlay}
-                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      {playbackState.isPlaying ? 'Pause' : 'Play'}
-                    </button>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={0}
-                      onChange={(e) => handleSeek(Number(e.target.value))}
-                      className="flex-1"
-                    />
-                  </>
-                )}
-                {!isHost && (
-                  <p className="text-white/60 text-sm">
-                    {playbackState.isPlaying ? 'Playing' : 'Paused'}
-                  </p>
-                )}
+              <div className="flex flex-col gap-2">
+                {/* Progress bar */}
+                <div className="flex items-center gap-2">
+                  <span className="text-white/60 text-xs w-12">
+                    {formatTime(currentTime)}
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={progressPercent}
+                    onChange={handleSeekSlider}
+                    disabled={!isHost}
+                    className="flex-1 accent-purple-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <span className="text-white/60 text-xs w-12 text-right">
+                    {formatTime(duration)}
+                  </span>
+                </div>
+
+                {/* Controls */}
+                <div className="flex items-center gap-4">
+                  {isHost ? (
+                    <>
+                      <button
+                        onClick={playbackState.isPlaying ? handlePause : handlePlay}
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        {playbackState.isPlaying ? 'Pause' : 'Play'}
+                      </button>
+                      <button
+                        onClick={() => setShowMediaInput(true)}
+                        className="glass-light hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                      >
+                        Change Video
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-white/60 text-sm">
+                      {playbackState.isPlaying ? '▶ Playing' : '⏸ Paused'}
+                      <span className="ml-2 text-white/40">(Host controls playback)</span>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -282,9 +496,13 @@ export default function RoomPage() {
                 type="text"
                 value={mediaUrl}
                 onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="Paste YouTube, VK Video, or direct video URL"
+                placeholder="Paste YouTube or direct video URL"
                 className="w-full glass-light rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
+                onKeyDown={(e) => e.key === 'Enter' && handleSetMedia()}
               />
+              <p className="text-white/40 text-xs mb-4">
+                Supported: YouTube links, direct video URLs (mp4, webm)
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowMediaInput(false)}

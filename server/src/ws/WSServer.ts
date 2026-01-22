@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { IncomingMessage } from 'http';
+import { IncomingMessage, Server as HttpServer } from 'http';
 import {
   WSMessage,
   CreateRoomPayload,
@@ -37,11 +37,16 @@ export class WSServer {
   private roomManager: RoomManager;
   private stateManager: StateManager;
 
-  constructor(port: number) {
+  constructor(port: number, httpServer?: HttpServer) {
     this.roomManager = new RoomManager();
     this.stateManager = new StateManager(this.roomManager);
 
-    this.wss = new WebSocketServer({ port });
+    // If an HTTP server is provided, attach WebSocket to it; otherwise create standalone
+    if (httpServer) {
+      this.wss = new WebSocketServer({ server: httpServer });
+    } else {
+      this.wss = new WebSocketServer({ port });
+    }
 
     this.wss.on('connection', this.handleConnection.bind(this));
 

@@ -1,3 +1,5 @@
+import type { WSClient } from '../services/WSClient';
+
 export interface TimeSyncResult {
   offset: number;
   roundTripTime: number;
@@ -9,22 +11,43 @@ export class TimeSync {
   private readonly maxSamples: number = 5;
   private readonly sampleInterval: number = 2000;
   private intervalId: number | null = null;
+  private wsClient: WSClient | null = null;
+  private pendingPings: Map<number, number> = new Map();
 
   private onSyncCallback: ((offset: number) => void) | null = null;
-  private sendPingCallback: (() => number) | null = null;
 
-  constructor() {}
+  constructor(wsClient?: WSClient) {
+    if (wsClient) {
+      this.wsClient = wsClient;
+      this.setupPongHandler();
+    }
+  }
 
-  start(sendPing: () => number): void {
-    this.sendPingCallback = sendPing;
+  private setupPongHandler(): void {
+    if (this.wsClient) {
+      this.wsClient.on('pong', (data) => {
+        const { clientTime, serverTime } = data as { clientTime: number; serverTime: number };
+        this.processPong(clientTime, serverTime);
+      });
+    }
+  }
 
-    // Initial sync
-    this.performSync();
-
-    // Periodic sync
-    this.intervalId = window.setInterval(() => {
+  start(sendPing?: () => number): void {
+    // If we have a WSClient, use it for ping/pong
+    if (this.wsClient) {
       this.performSync();
-    }, this.sampleInterval);
+
+      this.intervalId = window.setInterval(() => {
+        this.performSync();
+      }, this.sampleInterval);
+    } else if (sendPing) {
+      // Legacy mode: use callback
+      this.performSyncLegacy(sendPing);
+
+      this.intervalId = window.setInterval(() => {
+        this.performSyncLegacy(sendPing);
+      }, this.sampleInterval);
+    }
   }
 
   stop(): void {
@@ -35,9 +58,15 @@ export class TimeSync {
   }
 
   private performSync(): void {
-    if (this.sendPingCallback) {
-      this.sendPingCallback();
+    if (this.wsClient) {
+      const clientTime = Date.now();
+      this.pendingPings.set(clientTime, clientTime);
+      this.wsClient.send('ping', { clientTime });
     }
+  }
+
+  private performSyncLegacy(sendPing: () => number): void {
+    sendPing();
   }
 
   processPong(clientSendTime: number, serverTime: number): void {
@@ -51,6 +80,9 @@ export class TimeSync {
     const offset = serverTime + oneWayLatency - clientReceiveTime;
 
     this.addSample(offset);
+
+    // Clean up pending ping
+    this.pendingPings.delete(clientSendTime);
   }
 
   private addSample(offset: number): void {
@@ -99,6 +131,6 @@ export class TimeSync {
     this.samples = [];
     this.offset = 0;
     this.onSyncCallback = null;
-    this.sendPingCallback = null;
+    this.pendingPings.clear();
   }
 }

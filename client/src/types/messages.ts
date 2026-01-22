@@ -21,6 +21,8 @@ export type WSMessageType =
   | 'webrtc_signal'
   | 'transfer_host'
   | 'host_changed'
+  | 'ping'
+  | 'pong'
   | 'error';
 
 export interface WSMessage<T = unknown> {
