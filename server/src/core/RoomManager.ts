@@ -2,10 +2,15 @@ import { RoomState, RoomSettings, Participant } from '../types/room';
 import { generateRoomId } from '../utils/idGenerator';
 import { getServerTime } from '../utils/timeSync';
 import logger from '../utils/logger';
+import { hashPassword, verifyPassword } from '../utils/password';
 
 export class RoomManager {
   private rooms: Map<string, RoomState> = new Map();
 
+  /**
+   * Create a room synchronously with optional password hash.
+   * Use createRoomWithPassword for password-protected rooms.
+   */
   createRoom(hostId: string, settings?: Partial<RoomSettings>): RoomState {
     const roomId = generateRoomId();
 
@@ -23,7 +28,7 @@ export class RoomManager {
       participants: new Map(),
       settings: {
         isPrivate: settings?.isPrivate || false,
-        password: settings?.password,
+        passwordHash: settings?.passwordHash,
         maxParticipants: settings?.maxParticipants || 20,
       },
     };
@@ -32,6 +37,29 @@ export class RoomManager {
     logger.info(`Room created: ${roomId}`);
 
     return room;
+  }
+
+  /**
+   * Create a password-protected room (async due to bcrypt)
+   */
+  async createRoomWithPassword(hostId: string, password: string, maxParticipants = 20): Promise<RoomState> {
+    const passwordHash = await hashPassword(password);
+    return this.createRoom(hostId, {
+      isPrivate: true,
+      passwordHash,
+      maxParticipants,
+    });
+  }
+
+  /**
+   * Verify password for a private room
+   */
+  async verifyRoomPassword(roomId: string, password: string): Promise<boolean> {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.settings.isPrivate || !room.settings.passwordHash) {
+      return false;
+    }
+    return verifyPassword(password, room.settings.passwordHash);
   }
 
   getRoom(roomId: string): RoomState | undefined {

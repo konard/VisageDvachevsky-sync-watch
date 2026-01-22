@@ -2,18 +2,6 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage, Server as HttpServer } from 'http';
 import {
   WSMessage,
-  CreateRoomPayload,
-  JoinRoomPayload,
-  UpdateNicknamePayload,
-  TransferHostPayload,
-  SetMediaPayload,
-  PlayPayload,
-  PausePayload,
-  SeekPayload,
-  SetRatePayload,
-  ChatMessagePayload,
-  WebRTCSignalPayload,
-  PingPayload,
   PlaybackStatePayload,
 } from '../types/messages';
 import { Participant } from '../types/room';
@@ -22,6 +10,40 @@ import { StateManager } from '../core/StateManager';
 import logger from '../utils/logger';
 import { generateClientId, generateMessageId } from '../utils/idGenerator';
 import { getServerTime } from '../utils/timeSync';
+import { z } from 'zod';
+import {
+  validatePayload,
+  CreateRoomSchema,
+  JoinRoomSchema,
+  UpdateNicknameSchema,
+  TransferHostSchema,
+  SetMediaSchema,
+  PlaySchema,
+  PauseSchema,
+  SeekSchema,
+  SetRateSchema,
+  ChatMessageSchema,
+  WebRTCSignalSchema,
+  PingSchema,
+} from '../utils/validation';
+
+// Inferred types from Zod schemas
+type CreateRoomPayload = z.infer<typeof CreateRoomSchema>;
+type JoinRoomPayload = z.infer<typeof JoinRoomSchema>;
+type UpdateNicknamePayload = z.infer<typeof UpdateNicknameSchema>;
+type TransferHostPayload = z.infer<typeof TransferHostSchema>;
+type SetMediaPayload = z.infer<typeof SetMediaSchema>;
+type PlayPayload = z.infer<typeof PlaySchema>;
+type PausePayload = z.infer<typeof PauseSchema>;
+type SeekPayload = z.infer<typeof SeekSchema>;
+type SetRatePayload = z.infer<typeof SetRateSchema>;
+type ChatMessagePayload = z.infer<typeof ChatMessageSchema>;
+type WebRTCSignalPayload = z.infer<typeof WebRTCSignalSchema>;
+type PingPayload = z.infer<typeof PingSchema>;
+
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 1000; // 1 second window
+const MAX_COMMANDS_PER_WINDOW = 10; // Max 10 commands per second
 
 export interface ClientConnection {
   ws: WebSocket;
@@ -29,6 +51,7 @@ export interface ClientConnection {
   roomId?: string;
   nickname?: string;
   lastPing: number;
+  commandTimestamps: number[]; // For rate limiting
 }
 
 export class WSServer {
@@ -63,6 +86,7 @@ export class WSServer {
       ws,
       clientId,
       lastPing: Date.now(),
+      commandTimestamps: [],
     };
 
     this.clients.set(ws, client);
@@ -77,6 +101,21 @@ export class WSServer {
     });
   }
 
+  private checkRateLimit(client: ClientConnection): boolean {
+    const now = Date.now();
+    // Remove timestamps outside the window
+    client.commandTimestamps = client.commandTimestamps.filter(
+      (ts) => now - ts < RATE_LIMIT_WINDOW_MS
+    );
+
+    if (client.commandTimestamps.length >= MAX_COMMANDS_PER_WINDOW) {
+      return false; // Rate limited
+    }
+
+    client.commandTimestamps.push(now);
+    return true;
+  }
+
   private handleMessage(ws: WebSocket, data: unknown): void {
     try {
       const message: WSMessage = JSON.parse(data?.toString() || '{}');
@@ -84,45 +123,123 @@ export class WSServer {
 
       if (!client) return;
 
+      // Check rate limit
+      if (!this.checkRateLimit(client)) {
+        this.sendError(ws, 'RATE_LIMIT', 'Too many commands, please slow down');
+        return;
+      }
+
       logger.debug(`Received ${message.type} from ${client.clientId}`);
 
       switch (message.type) {
-        case 'create_room':
-          this.handleCreateRoom(ws, client, message.payload as CreateRoomPayload);
+        case 'create_room': {
+          const result = validatePayload(CreateRoomSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleCreateRoom(ws, client, result.data);
           break;
-        case 'join_room':
-          this.handleJoinRoom(ws, client, message.payload as JoinRoomPayload);
+        }
+        case 'join_room': {
+          const result = validatePayload(JoinRoomSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleJoinRoom(ws, client, result.data);
           break;
-        case 'update_nickname':
-          this.handleUpdateNickname(ws, client, message.payload as UpdateNicknamePayload);
+        }
+        case 'update_nickname': {
+          const result = validatePayload(UpdateNicknameSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleUpdateNickname(ws, client, result.data);
           break;
-        case 'transfer_host':
-          this.handleTransferHost(ws, client, message.payload as TransferHostPayload);
+        }
+        case 'transfer_host': {
+          const result = validatePayload(TransferHostSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleTransferHost(ws, client, result.data);
           break;
-        case 'set_media':
-          this.handleSetMedia(ws, client, message.payload as SetMediaPayload);
+        }
+        case 'set_media': {
+          const result = validatePayload(SetMediaSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleSetMedia(ws, client, result.data);
           break;
-        case 'play':
-          this.handlePlay(ws, client, message.payload as PlayPayload);
+        }
+        case 'play': {
+          const result = validatePayload(PlaySchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handlePlay(ws, client, result.data);
           break;
-        case 'pause':
-          this.handlePause(ws, client, message.payload as PausePayload);
+        }
+        case 'pause': {
+          const result = validatePayload(PauseSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handlePause(ws, client, result.data);
           break;
-        case 'seek':
-          this.handleSeek(ws, client, message.payload as SeekPayload);
+        }
+        case 'seek': {
+          const result = validatePayload(SeekSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleSeek(ws, client, result.data);
           break;
-        case 'set_rate':
-          this.handleSetRate(ws, client, message.payload as SetRatePayload);
+        }
+        case 'set_rate': {
+          const result = validatePayload(SetRateSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleSetRate(ws, client, result.data);
           break;
-        case 'chat_message':
-          this.handleChatMessage(ws, client, message.payload as ChatMessagePayload);
+        }
+        case 'chat_message': {
+          const result = validatePayload(ChatMessageSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleChatMessage(ws, client, result.data);
           break;
-        case 'webrtc_signal':
-          this.handleWebRTCSignal(ws, client, message.payload as WebRTCSignalPayload);
+        }
+        case 'webrtc_signal': {
+          const result = validatePayload(WebRTCSignalSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handleWebRTCSignal(ws, client, result.data);
           break;
-        case 'ping':
-          this.handlePing(ws, client, message.payload as PingPayload);
+        }
+        case 'ping': {
+          const result = validatePayload(PingSchema, message.payload);
+          if (!result.success) {
+            this.sendError(ws, 'VALIDATION_ERROR', result.error);
+            return;
+          }
+          this.handlePing(ws, client, result.data);
           break;
+        }
         default:
           logger.warn(`Unknown message type: ${message.type}`);
       }
@@ -159,7 +276,7 @@ export class WSServer {
     this.sendRoomState(ws, client);
   }
 
-  private handleJoinRoom(ws: WebSocket, client: ClientConnection, payload: JoinRoomPayload): void {
+  private async handleJoinRoom(ws: WebSocket, client: ClientConnection, payload: JoinRoomPayload): Promise<void> {
     const { roomId, nickname, password } = payload;
 
     const room = this.roomManager.getRoom(roomId);
@@ -168,9 +285,13 @@ export class WSServer {
       return;
     }
 
-    if (room.settings.isPrivate && room.settings.password !== password) {
-      this.sendError(ws, 'INVALID_PASSWORD', 'Invalid password');
-      return;
+    // Verify password for private rooms using bcrypt
+    if (room.settings.isPrivate) {
+      const isValid = await this.roomManager.verifyRoomPassword(roomId, password || '');
+      if (!isValid) {
+        this.sendError(ws, 'INVALID_PASSWORD', 'Invalid password');
+        return;
+      }
     }
 
     const participant: Participant = {

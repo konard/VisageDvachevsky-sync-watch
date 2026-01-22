@@ -10,11 +10,18 @@ const WS_PORT = parseInt(process.env.WS_PORT || '3001');
 function main() {
   logger.info('Starting SyncWatch server...');
 
+  // WSServer needs to be created first to get room count in health check
+  let wsServer: WSServer | null = null;
+
   // Create HTTP server for health checks
   const httpServer = http.createServer((req, res) => {
     if (req.url === '/health' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok', timestamp: Date.now() }));
+      res.end(JSON.stringify({
+        status: 'ok',
+        timestamp: Date.now(),
+        rooms: wsServer?.getRoomManager().getRoomCount() ?? 0,
+      }));
     } else {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Not Found');
@@ -25,7 +32,7 @@ function main() {
     logger.info(`HTTP health endpoint ready on port ${WS_PORT}`);
   });
 
-  const wsServer = new WSServer(WS_PORT, httpServer);
+  wsServer = new WSServer(WS_PORT, httpServer);
 
   // Handle graceful shutdown
   process.on('SIGTERM', () => {
