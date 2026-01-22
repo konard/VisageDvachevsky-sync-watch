@@ -11,6 +11,7 @@ import {
   ChatPanel,
   ParticipantsList,
   MediaInputModal,
+  VoiceChat,
   type VideoPlayerRef,
 } from '../components';
 
@@ -262,6 +263,30 @@ export default function RoomPage() {
     }
   };
 
+  const handleVoiceStateChange = (enabled: boolean, muted: boolean) => {
+    // Update current participant's voice state
+    if (currentParticipant) {
+      setCurrentParticipant({
+        ...currentParticipant,
+        voice: { enabled, muted },
+      });
+      // Also update in participants list
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.odId === currentParticipant.odId
+            ? { ...p, voice: { enabled, muted } }
+            : p
+        )
+      );
+      // Notify server of voice state change
+      wsClient.send('update_nickname', {
+        nickname: currentParticipant.nickname,
+        voiceEnabled: enabled,
+        voiceMuted: muted,
+      });
+    }
+  };
+
   if (!isConnected) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -367,6 +392,12 @@ export default function RoomPage() {
       {/* Sidebar - Chat and participants */}
       <div className="w-full lg:w-80 flex flex-col gap-4">
         <ParticipantsList participants={participants} />
+        <VoiceChat
+          wsClient={wsClient}
+          participants={participants}
+          currentParticipantId={currentParticipant?.odId || ''}
+          onVoiceStateChange={handleVoiceStateChange}
+        />
         <ChatPanel
           messages={chatMessages}
           newMessage={newMessage}

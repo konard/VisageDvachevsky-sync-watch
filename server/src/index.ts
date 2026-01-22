@@ -7,7 +7,7 @@ dotenv.config();
 
 const WS_PORT = parseInt(process.env.WS_PORT || '3001');
 
-function main() {
+async function main() {
   logger.info('Starting SyncWatch server...');
 
   // WSServer needs to be created first to get room count in health check
@@ -16,11 +16,13 @@ function main() {
   // Create HTTP server for health checks
   const httpServer = http.createServer((req, res) => {
     if (req.url === '/health' && req.method === 'GET') {
+      const roomManager = wsServer?.getRoomManager();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         status: 'ok',
         timestamp: Date.now(),
-        rooms: wsServer?.getRoomManager().getRoomCount() ?? 0,
+        rooms: roomManager?.getRoomCount() ?? 0,
+        redis: roomManager?.isRedisEnabled() ?? false,
       }));
     } else {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -33,6 +35,13 @@ function main() {
   });
 
   wsServer = new WSServer(WS_PORT, httpServer);
+
+  // Initialize Redis for room persistence (optional, will fallback to memory)
+  try {
+    await wsServer.getRoomManager().initializeRedis();
+  } catch (error) {
+    logger.warn('Redis initialization skipped - using in-memory storage');
+  }
 
   // Handle graceful shutdown
   process.on('SIGTERM', () => {
