@@ -23,7 +23,7 @@ export default function MediaInputModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="glass rounded-xl p-6 w-full max-w-md">
+      <div className="glass glass-modal rounded-xl p-6 w-full max-w-md">
         <h3 className="text-white font-semibold mb-4">Add Video</h3>
         <input
           type="text"
