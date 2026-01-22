@@ -48,7 +48,7 @@ export default function PlayerControls({
             value={progressPercent}
             onChange={handleSeekSlider}
             disabled={!isHost}
-            className="flex-1 accent-purple-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 accent-sky-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           />
           <span className="text-white/60 text-xs w-12 text-right">
             {formatTime(duration)}
@@ -61,7 +61,7 @@ export default function PlayerControls({
             <>
               <button
                 onClick={isPlaying ? onPause : onPlay}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="btn-glass-primary px-4 py-2 rounded-lg transition-colors"
               >
                 {isPlaying ? 'Pause' : 'Play'}
               </button>

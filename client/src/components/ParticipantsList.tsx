@@ -20,7 +20,7 @@ export default function ParticipantsList({ participants }: ParticipantsListProps
             <span className="text-sm">
               {participant.nickname}
               {participant.isHost && (
-                <span className="text-purple-400 ml-1">(Host)</span>
+                <span className="text-sky-400 ml-1">(Host)</span>
               )}
             </span>
           </div>

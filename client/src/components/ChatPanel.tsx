@@ -45,7 +45,7 @@ export default function ChatPanel({
         ) : (
           messages.map((msg) => (
             <div key={msg.id} className="text-sm">
-              <span className="text-purple-400 font-medium">
+              <span className="text-sky-400 font-medium">
                 {msg.nickname}:
               </span>
               <span className="text-white/80 ml-2">{msg.text}</span>
@@ -62,11 +62,11 @@ export default function ChatPanel({
             onChange={(e) => onNewMessageChange(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
-            className="flex-1 glass-light rounded-lg px-3 py-2 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="flex-1 glass-light rounded-xl px-3 py-2 text-white placeholder-white/40 focus:outline-none text-sm"
           />
           <button
             onClick={onSendMessage}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="btn-glass-primary px-4 py-2 rounded-xl transition-all"
           >
             Send
           </button>

@@ -246,7 +246,7 @@ export function VoiceChat({
             <button
               onClick={handleEnableVoice}
               disabled={isConnecting}
-              className="p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 transition-colors disabled:opacity-50"
               title="Join voice chat"
             >
               {isConnecting ? (
@@ -285,12 +285,12 @@ export function VoiceChat({
                   >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium relative ${
-                        isConnected ? 'bg-purple-500/30' : 'bg-white/10'
+                        isConnected ? 'bg-sky-500/30' : 'bg-white/10'
                       }`}
                       style={{
                         boxShadow:
                           audioLevel > 0.1
-                            ? `0 0 ${audioLevel * 20}px ${audioLevel * 10}px rgba(168, 85, 247, ${audioLevel})`
+                            ? `0 0 ${audioLevel * 20}px ${audioLevel * 10}px rgba(14, 165, 233, ${audioLevel})`
                             : 'none',
                       }}
                     >
@@ -318,7 +318,7 @@ export function VoiceChat({
                             key={i}
                             className={`w-1 rounded-full transition-all ${
                               audioLevel > (i + 1) * 0.15
-                                ? 'bg-purple-400'
+                                ? 'bg-sky-400'
                                 : 'bg-white/20'
                             }`}
                             style={{

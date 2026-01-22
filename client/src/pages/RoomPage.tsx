@@ -369,7 +369,7 @@ export default function RoomPage() {
                 {isHost && (
                   <button
                     onClick={() => setShowMediaInput(true)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
+                    className="btn-glass-primary px-6 py-2 rounded-xl transition-all"
                   >
                     Add Video
                   </button>

@@ -15,6 +15,29 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* === Apple Liquid Glass Color System === */
+
+  /* Glass Surfaces (Dark Mode) */
+  --glass-surface-1: rgba(30, 30, 30, 0.75);
+  --glass-surface-2: rgba(45, 45, 45, 0.60);
+  --glass-surface-3: rgba(60, 60, 60, 0.45);
+
+  /* Accent Colors - Muted Apple-style blues */
+  --accent-blue: rgba(10, 132, 255, 0.85);
+  --accent-blue-subtle: rgba(10, 132, 255, 0.15);
+  --accent-green: rgba(48, 209, 88, 0.85);
+  --accent-red: rgba(255, 69, 58, 0.85);
+
+  /* Text Colors */
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-tertiary: rgba(255, 255, 255, 0.45);
+
+  /* Border Colors */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-emphasis: rgba(255, 255, 255, 0.18);
 }
 
 body {
@@ -25,28 +48,28 @@ body {
 
 a {
   font-weight: 500;
-  color: #60a5fa;
+  color: var(--accent-blue);
   text-decoration: inherit;
 }
 a:hover {
-  color: #93c5fd;
+  color: rgba(100, 180, 255, 1);
 }
 
-/* Apple Liquid Glass - Primary glass effect */
+/* === Apple Liquid Glass - Primary Glass Effect === */
 .glass {
   position: relative;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-surface-1);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-default);
   box-shadow:
-    0 8px 32px 0 rgba(0, 0, 0, 0.37),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.1);
+    0 8px 32px 0 rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.15);
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Gradient border for glass elements */
+/* Subtle gradient border for glass elements */
 .glass::before {
   content: '';
   position: absolute;
@@ -55,8 +78,8 @@ a:hover {
   padding: 1px;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.3),
-    rgba(255, 255, 255, 0.05)
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.02)
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box,
                 linear-gradient(#fff 0 0);
@@ -66,72 +89,174 @@ a:hover {
 }
 
 .glass:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-surface-2);
+  border-color: var(--border-emphasis);
   box-shadow:
     0 12px 40px 0 rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.1);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.15);
 }
 
-/* Apple Liquid Glass - Dark variant */
+/* === Apple Liquid Glass - Dark Variant === */
 .glass-dark {
-  background: rgba(30, 30, 30, 0.8);
+  background: rgba(20, 20, 20, 0.85);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
   box-shadow:
-    0 8px 32px 0 rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    0 8px 32px 0 rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .glass-dark:hover {
-  background: rgba(30, 30, 30, 0.85);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(25, 25, 25, 0.9);
+  border-color: var(--border-default);
   box-shadow:
-    0 12px 40px 0 rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    0 12px 40px 0 rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Apple Liquid Glass - Light variant for inputs and buttons */
+/* === Apple Liquid Glass - Light Variant for Inputs === */
 .glass-light {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
   box-shadow:
-    0 4px 16px 0 rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    0 4px 16px 0 rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .glass-light:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-default);
 }
 
 .glass-light:focus {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-emphasis);
   box-shadow:
-    0 4px 16px 0 rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
-    0 0 0 3px rgba(168, 85, 247, 0.2);
+    0 4px 16px 0 rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.03),
+    0 0 0 3px var(--accent-blue-subtle);
 }
 
-/* Glass modal animation */
+/* === Apple Liquid Glass Button - Primary === */
+.btn-glass-primary {
+  background: var(--accent-blue);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 4px 16px rgba(10, 132, 255, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: white;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.btn-glass-primary:hover {
+  background: rgba(10, 132, 255, 0.95);
+  box-shadow:
+    0 6px 24px rgba(10, 132, 255, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-glass-primary:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 8px rgba(10, 132, 255, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.btn-glass-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* === Apple Liquid Glass Button - Secondary === */
+.btn-glass-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.btn-glass-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-emphasis);
+}
+
+.btn-glass-secondary:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-glass-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === Glass Modal Animation === */
 @keyframes glass-appear {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.96);
+    backdrop-filter: blur(0px);
   }
   to {
     opacity: 1;
     transform: scale(1);
+    backdrop-filter: blur(40px);
   }
 }
 
 .glass-modal {
   animation: glass-appear 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* === Utility Classes for Liquid Glass === */
+.text-glass-primary {
+  color: var(--text-primary);
+}
+
+.text-glass-secondary {
+  color: var(--text-secondary);
+}
+
+.text-glass-tertiary {
+  color: var(--text-tertiary);
+}
+
+.border-glass {
+  border-color: var(--border-default);
+}
+
+.border-glass-subtle {
+  border-color: var(--border-subtle);
+}
+
+/* === Reduced Motion Support === */
+@media (prefers-reduced-motion: reduce) {
+  .glass,
+  .glass-dark,
+  .glass-light,
+  .btn-glass-primary,
+  .btn-glass-secondary {
+    transition: none;
+  }
+
+  .glass-modal {
+    animation: none;
+  }
 }

@@ -30,7 +30,7 @@ export default function MediaInputModal({
           value={mediaUrl}
           onChange={(e) => onMediaUrlChange(e.target.value)}
           placeholder="Paste YouTube or direct video URL"
-          className="w-full glass-light rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
+          className="w-full glass-light rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none mb-4"
           onKeyDown={handleKeyDown}
         />
         <p className="text-white/40 text-xs mb-4">
@@ -45,7 +45,7 @@ export default function MediaInputModal({
           </button>
           <button
             onClick={onSubmit}
-            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition-colors"
+            className="flex-1 btn-glass-primary py-2 rounded-lg transition-colors"
           >
             Add
           </button>

@@ -105,7 +105,7 @@ export default function HomePage() {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="Enter your nickname"
-              className="w-full glass-light rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full glass-light rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none"
               maxLength={20}
             />
           </div>
@@ -114,7 +114,7 @@ export default function HomePage() {
             <button
               onClick={handleCreateRoom}
               disabled={isCreating || isJoining}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              className="w-full btn-glass-primary py-3 px-6 rounded-xl transition-all"
             >
               {isCreating ? 'Creating...' : 'Create New Room'}
             </button>
@@ -135,14 +135,14 @@ export default function HomePage() {
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
               placeholder="Enter room ID to join"
-              className="w-full glass-light rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full glass-light rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none"
             />
           </div>
 
           <button
             onClick={handleJoinRoom}
             disabled={isCreating || isJoining}
-            className="w-full glass-light hover:bg-white/20 disabled:bg-white/5 text-white font-semibold py-3 px-6 rounded-lg transition-colors border border-white/20"
+            className="w-full btn-glass-secondary py-3 px-6 rounded-xl transition-all"
           >
             {isJoining ? 'Joining...' : 'Join Room'}
           </button>
